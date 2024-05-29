@@ -1,5 +1,10 @@
 .App {
   text-align: center;
+  
+}
+
+.bg-pastel-blue{
+  background-color: #fff;
 }
 
 .App-logo {
@@ -36,3 +41,5 @@
     transform: rotate(360deg);
   }
 }
+
+
