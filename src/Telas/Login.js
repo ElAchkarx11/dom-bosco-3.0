@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 
 
-function App() {
+function Login() {
 
 
   const [email, setEmail] = useState(''); // Estado para armazenar o valor do usuário
@@ -109,4 +109,4 @@ function App() {
   );
 }
 
-export default App; 
+export default Login; 
