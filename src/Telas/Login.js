@@ -30,14 +30,11 @@ function Login() {
   const handleSubmit = (event) => {
     event.preventDefault(); // Evita o comportamento padrão do formulário (recarregar a página)
 
-    console.log(email, senha); // Debug para verificar o valor do usuário e senha
-
     const authInstance = getAuth(); // Obtenha a instância auth
     signInWithEmailAndPassword(authInstance, email, senha) // Use a instância auth corretamente
       .then(userCredential => {
         const user = userCredential.user;
         alert('Login bem-sucedido!');
-        console.log(user);
         navigate('/Inicial')
       })
       .catch(error => {

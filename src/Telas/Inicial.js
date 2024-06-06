@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from '../firebase.js';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -9,17 +9,18 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { format } from 'date-fns';
+
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-function Relatorio() {
+function Inicial() {
   const navigate = useNavigate();
   const [authenticated, setAuthenticated] = useState(false);
-  const [diarioAlimentacao, setDiarioAlimentacao] = useState([]);
-  const [diarioBazar, setDiarioBazar] = useState([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [vendas, setVendas] = useState([]);
+  const [startDate, setStartDate] = useState(localStorage.getItem('startDate') || '');
+  const [endDate, setEndDate] = useState(localStorage.getItem('endDate') || '');
+  const [showAlimentacao, setShowAlimentacao] = useState(true);
+  const [showBazar, setShowBazar] = useState(true);
 
   useEffect(() => {
     const auth = getAuth();
@@ -34,6 +35,14 @@ function Relatorio() {
     return unsubscribe;
   }, [navigate]);
 
+  useEffect(() => {
+    localStorage.setItem('startDate', startDate);
+  }, [startDate]);
+
+  useEffect(() => {
+    localStorage.setItem('endDate', endDate);
+  }, [endDate]);
+
   const fetchRelatorios = async () => {
     if (!startDate || !endDate) {
       alert("Por favor, selecione o intervalo de datas.");
@@ -42,144 +51,267 @@ function Relatorio() {
 
     const inicio = new Date(startDate);
     const fim = new Date(endDate);
-    fim.setDate(fim.getDate() + 1); // Avança para o próximo dia
-    fim.setHours(0, 0, 0, 0); // Define o horário para 00:00:00.000 do próximo dia
-
+    fim.setDate(fim.getDate() + 1); // Adiciona um dia à data final
 
     try {
+      let relatorios = [];
+
       // Consultas para alimentação
-      const alimentacaoQuery = query(collection(db, "alimentacao"), where("timestamp", ">=", inicio), where("timestamp", "<=", fim));
-      const alimentacaoSnapshot = await getDocs(alimentacaoQuery);
+      if (showAlimentacao) {
+        const alimentacaoQuery = query(collection(db, "alimentacao"), where("timestamp", ">=", inicio), where("timestamp", "<", fim));
+        const alimentacaoSnapshot = await getDocs(alimentacaoQuery);
 
-      const alimentacaoData = alimentacaoSnapshot.docs.flatMap(doc =>
-        (doc.data().alimentos || []).map(item => ({ ...item, timestamp: doc.data().timestamp }))
-      );
+        const alimentacaoData = alimentacaoSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const secao = (data.alimentos && data.alimentos.length > 0 && data.alimentos[0].secao) || 'N/A'; // Acessa o campo secao dentro do array
+          return {
+            ...data,
+            id: doc.id,
+            tipo: "alimentacao",
+            secao: secao
+          };
+        });
 
-      setDiarioAlimentacao(alimentacaoData);
+        relatorios = [...relatorios, ...alimentacaoData];
+      }
 
       // Consultas para bazar
-      const bazarQuery = query(collection(db, "bazar"), where("timestamp", ">=", inicio), where("timestamp", "<=", fim));
-      const bazarSnapshot = await getDocs(bazarQuery);
+      if (showBazar) {
+        const bazarQuery = query(collection(db, "bazar"), where("timestamp", ">=", inicio), where("timestamp", "<", fim));
+        const bazarSnapshot = await getDocs(bazarQuery);
 
-      const bazarData = bazarSnapshot.docs.flatMap(doc => {
-        const bazarInfo = doc.data();
-        // Verificar se o documento possui a propriedade "alimentos"
-        if (bazarInfo.hasOwnProperty("bazar")) {
-          // Se possui, mapear os alimentos e adicionar o timestamp
-          return bazarInfo.bazar.map(item => ({ ...item, timestamp: bazarInfo.timestamp }));
-        } else {
-          // Se não possui, retornar um array vazio
-          return [];
-        }
-      });
+        const bazarData = bazarSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const secao = (data.bazar && data.bazar.length > 0 && data.bazar[0].secao) || 'N/A'; // Acessa o campo secao dentro do array
+          return {
+            ...data,
+            id: doc.id,
+            tipo: "bazar",
+            secao: secao
+          };
+        });
 
-      setDiarioBazar(bazarData);
+        relatorios = [...relatorios, ...bazarData];
+      }
+
+      setVendas(relatorios);
     } catch (error) {
       console.error("Erro ao buscar relatórios: ", error);
     }
   };
 
-  const renderTable = (data) => (
-    <table className="table">
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>Código</th>
-          <th>Seção</th>
-          <th>Qtd. Vendida</th>
-          <th>Data</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((item, index) => (
-          <tr key={index}>
-            <td>{item.nome || 'N/A'}</td>
-            <td>{item.codigo || 'N/A'}</td>
-            <td>{item.secao || 'N/A'}</td>
-            <td>{item.qtd || 'N/A'}</td>
-            <td>{item.timestamp ? format(item.timestamp.toDate(), 'dd/MM/yyyy') : 'N/A'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+  const renderVendas = () => {
+    // Filtra as vendas com base nos checkboxes de exibição
+    const vendasFiltradas = vendas.filter((venda) => {
+      if (venda.tipo === "alimentacao") {
+        return showAlimentacao;
+      } else if (venda.tipo === "bazar") {
+        return showBazar;
+      }
+      return false;
+    });
 
-  const calculateTotal = (data) => {
-    return data.reduce((total, item) => total + (item.qtd || 0), 0);
+    // Mapeia as vendas filtradas para elementos JSX
+    return vendasFiltradas.map((venda, index) => {
+      let valorTotal = 0;
+
+      if (venda.tipo === "alimentacao") {
+        valorTotal = venda.alimentos.reduce((acc, item) => acc + (item.qtd * item.preco), 0);
+      } else if (venda.tipo === "bazar") {
+        valorTotal = venda.bazar.reduce((acc, item) => acc + (item.qtd * item.preco), 0);
+      }
+
+      return (
+        <div
+          key={venda.id}
+          className="venda-bloco border rounded p-3 mb-2"
+          onClick={() => navigate(`/${venda.tipo}/${venda.id}`, { state: { venda } })}
+          style={{ cursor: 'pointer' }}
+        >
+          <h4>{`Venda Data ${new Date(venda.timestamp.seconds * 1000).toLocaleString()}`}</h4>
+          <p><strong>Seção:</strong> {venda.secao || 'N/A'}</p>
+          <p><strong>Valor Total:</strong> R$ {valorTotal.toFixed(2)}</p>
+        </div>
+      );
+    });
   };
 
-  const generatePDF = () => {
-    const pdf = new jsPDF('p', 'pt', 'a4');
-    let yPos = 40;
-
-    pdf.setFontSize(18);
-    pdf.text("Relatório de Vendas", 40, yPos);
-    yPos += 20;
-
-    pdf.setFontSize(14);
-    pdf.text(`Período: ${startDate} - ${endDate}`, 40, yPos);
-    yPos += 20;
-
-    if (diarioAlimentacao.length > 0) {
-      pdf.text("Alimentação", 40, yPos);
-      yPos += 20;
-
-      pdf.autoTable({
-        startY: yPos,
-        head: [['Nome', 'Código', 'Seção', 'Qtd. Vendida', 'Data']],
-        body: diarioAlimentacao.map(item => [
-          item.nome || 'N/A',
-          item.codigo || 'N/A',
-          item.secao || 'N/A',
-          item.qtd || 'N/A',
-          item.timestamp ? format(item.timestamp.toDate(), 'dd/MM/yyyy') : 'N/A'
-        ])
-      });
-
-      yPos = pdf.autoTable.previous.finalY + 20;
-
-      const totalAlimentacao = calculateTotal(diarioAlimentacao);
-      pdf.text(`Total de Qtd. Vendida: ${totalAlimentacao}`, 40, yPos);
-      yPos += 20;
+  const handleClickRelatorioTotal = () => {
+    // Verifica se há vendas a serem incluídas no relatório total
+    if (vendas.length === 0) {
+      alert("Não há vendas para gerar o relatório total.");
+      return;
     }
 
-    if (diarioBazar.length > 0) {
-      pdf.text("Bazar", 40, yPos);
-      yPos += 20;
+    const doc = new jsPDF();
+    let startY = 10; // Posição inicial na página
 
-      pdf.autoTable({
-        startY: yPos,
-        head: [['Nome', 'Código', 'Seção', 'Qtd. Vendida', 'Data']],
-        body: diarioBazar.map(item => [
-          item.nome || 'N/A',
-          item.codigo || 'N/A',
-          item.secao || 'N/A',
-          item.qtd || 'N/A',
-          item.timestamp ? format(item.timestamp.toDate(), 'dd/MM/yyyy') : 'N/A'
-        ])
-      });
+    const vendasFiltradas = vendas.filter((venda) => {
+      if (venda.tipo === "alimentacao") {
+        return showAlimentacao;
+      } else if (venda.tipo === "bazar") {
+        return showBazar;
+      }
+      return false;
+    });
 
-      yPos = pdf.autoTable.previous.finalY + 20;
+    vendasFiltradas.forEach((venda, index) => {
+      let valorTotalVenda = 0; // Variável para armazenar o valor total da venda
 
-      const totalBazar = calculateTotal(diarioBazar);
-      pdf.text(`Total de Qtd. Vendida: ${totalBazar}`, 40, yPos);
-      yPos += 20;
-    }
+      // Adiciona título da venda
+      doc.text(`Venda Data ${new Date(venda.timestamp.seconds * 1000).toLocaleString()}`, 10, startY);
 
-    pdf.save('relatorio.pdf');
+      // Verifica o tipo de venda e constrói a tabela correspondente
+      if (venda.tipo === "alimentacao" && venda.alimentos) {
+        const headers = ['codigo', 'Nome', 'Quantidade', 'Valor Und.', 'Valor Total']; // Adiciona o cabeçalho para as duas colunas extras
+        const data = venda.alimentos.map(item => {
+          const preco = Number(item.preco);
+          const valorTotalItem = item.qtd * preco;
+          valorTotalVenda += valorTotalItem; // Adiciona o valor total deste item ao total da venda
+          return [
+            item.codigo,
+            item.nome,
+            item.qtd,
+            `R$ ${preco.toFixed(2)}`, // Converte para número e formata o valor unitário
+            `R$ ${valorTotalItem.toFixed(2)}`, // Calcula o valor total e formata
+          ];
+        });
+
+        // Adiciona uma linha extra com o total da venda
+        data.push(['', '', '', 'Total da Venda:', `R$ ${valorTotalVenda.toFixed(2)}`]);
+
+        doc.autoTable({
+          startY: startY + 20, // Ajusta a posição inicial da tabela
+          head: [headers],
+          body: data,
+        });
+      } else if (venda.tipo === "bazar" && venda.bazar) {
+        const headers = ['Nome', 'Quantidade', 'Valor Und.', 'Valor Total']; // Adiciona o cabeçalho para as duas colunas extras
+        const data = venda.bazar.map(item => {
+          const preco = Number(item.preco);
+          const valorTotalItem = item.qtd * preco;
+          valorTotalVenda += valorTotalItem; // Adiciona o valor total deste item ao total da venda
+          return [
+            item.nome,
+            item.qtd,
+            `R$ ${preco.toFixed(2)}`, // Converte para número e formata o valor unitário
+            `R$ ${valorTotalItem.toFixed(2)}`, // Calcula o valor total e formata
+          ];
+        });
+
+        // Adiciona uma linha extra com o total da venda
+        data.push(['', '', 'Total da Venda:', `R$ ${valorTotalVenda.toFixed(2)}`]);
+
+        doc.autoTable({
+          startY: startY + 20, // Ajusta a posição inicial da tabela
+          head: [headers],
+          body: data,
+        });
+      }
+      startY = doc.autoTable.previous.finalY + 10; // Atualiza a posição inicial para a próxima tabela
+    });
+
+    doc.save('relatorio_historico_vendas.pdf');
   };
+
+
+  const handleClickRelatorio = () => {
+    // Verifica se há vendas a serem incluídas no relatório
+    if (vendas.length === 0) {
+      alert("Não há vendas para gerar o relatório.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    let startY = 10; // Posição inicial na página
+    let totalPagesExp = '{total_pages_count_string}';
+
+    const vendasFiltradas = vendas.filter((venda) => {
+      if (venda.tipo === "alimentacao") {
+        return showAlimentacao;
+      } else if (venda.tipo === "bazar") {
+        return showBazar;
+      }
+      return false;
+    });
+
+    let allProducts = {}; // Objeto para armazenar todos os produtos
+
+    vendasFiltradas.forEach((venda, index) => {
+      let valorTotalVenda = 0; // Variável para armazenar o valor total da venda
+
+      // Verifica o tipo de venda e itera sobre os itens correspondentes
+      if (venda.tipo === "alimentacao" && venda.alimentos) {
+        venda.alimentos.forEach(item => {
+          const chave = `${item.codigo}-${item.nome}`; // Cria uma chave única para o produto
+          const preco = Number(item.preco);
+          const valorTotalItem = item.qtd * preco;
+          valorTotalVenda += valorTotalItem; // Adiciona o valor total deste item ao total da venda
+
+          // Adiciona o item ao objeto allProducts ou atualiza a quantidade e valor total se já existir
+          if (!allProducts[chave]) {
+            allProducts[chave] = { ...item, totalQuantidade: item.qtd, totalValor: valorTotalItem, precoUnitario: preco };
+          } else {
+            allProducts[chave].totalQuantidade += item.qtd;
+            allProducts[chave].totalValor += valorTotalItem;
+          }
+        });
+      } else if (venda.tipo === "bazar" && venda.bazar) {
+        venda.bazar.forEach(item => {
+          const chave = `${item.codigo}-${item.nome}`; // Cria uma chave única para o produto
+          const preco = Number(item.preco);
+          const valorTotalItem = item.qtd * preco;
+          valorTotalVenda += valorTotalItem; // Adiciona o valor total deste item ao total da venda
+
+          // Adiciona o item ao objeto allProducts ou atualiza a quantidade e valor total se já existir
+          if (!allProducts[chave]) {
+            allProducts[chave] = { ...item, totalQuantidade: item.qtd, totalValor: valorTotalItem, precoUnitario: preco };
+          } else {
+            allProducts[chave].totalQuantidade += item.qtd;
+            allProducts[chave].totalValor += valorTotalItem;
+          }
+        });
+      }
+    });
+
+    // Inicia a criação da tabela
+    const headers = ['Código', 'Nome', 'Quantidade', 'Preço Unitário', 'Valor Total'];
+
+    const data = Object.values(allProducts).map(item => [
+      item.codigo,
+      item.nome,
+      item.totalQuantidade,
+      `R$ ${item.precoUnitario.toFixed(2)}`, // Adiciona o preço unitário formatado
+      `R$ ${item.totalValor.toFixed(2)}`
+    ]);
+
+    doc.autoTable({
+      startY: startY,
+      head: [headers],
+      body: data,
+
+      didDrawPage: function (data) {
+        const totalPages = doc.internal.getNumberOfPages();
+        doc.setFontSize(10);
+        doc.text('Página ' + data.pageNumber + ' de ' + totalPagesExp, data.settings.margin.left, doc.internal.pageSize.height - 10);
+      }
+    });
+
+    doc.save('relatorio_valores_totais.pdf');
+  };
+
 
   const handleLogout = () => {
     signOut(auth);
-  }
+  };
 
   const handleClickInicial = () => {
     navigate('/Inicial');
-  }
+  };
 
   const handleClickCadastro = () => {
     navigate('/Cadastro');
-  }
+  };
 
   const handleClickBazar = () => {
     navigate('/Vendas Bazar/Bazar');
@@ -187,19 +319,10 @@ function Relatorio() {
 
   const handleClickAlimentacao = () => {
     navigate('/Vendas Alimento/Alimentacao');
-  }
-
+  };
   const handleClickVisualizacao = () => {
     navigate('/Visualizacao');
-  }
-
-  const handleBack = () => {
-    navigate(-1);
-  }
-
-  const handleClickRelatorio = () => {
-    navigate('/Relatorio');
-  }
+  };
 
   return (
     <div className='container-fluid'>
@@ -232,11 +355,11 @@ function Relatorio() {
               <h2>Relatório de Vendas</h2>
               <hr />
             </div>
-            <div style={{ height: "300px" }} className='border rounded col-md-4'>
+            <div style={{ height: "400px" }} className='border rounded col-md-4'>
               <div className=''>
                 <div className='row'>
                   <div className='text-center border-bottom'>
-                    <h3 className='p-2'> Dashboard</h3>
+                    <h3 className='p-2'>Histórico</h3>
                   </div>
                   <div className='col-md-12'>
                     <label htmlFor="startDate">Data de Início:</label>
@@ -247,39 +370,52 @@ function Relatorio() {
                     <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="form-control" />
                   </div>
                 </div>
-                <div className="text-end my-2">
-                  <button className="btn btn-primary col-12" onClick={fetchRelatorios}>Buscar Relatórios</button>
-                </div>
-                <div className="text-end my-2 ">
-                  <button className="btn btn-primary col-12" onClick={generatePDF}>Gerar PDF</button>
+                <div className='align-itens-center'>
+                  <div className="text-end my-2">
+                    <button className="btn btn-primary col-12" onClick={fetchRelatorios}>Buscar Relatórios</button>
+                  </div>
+                  <div className="text-end my-2">
+                    <button className="btn btn-primary col-12" onClick={handleClickRelatorio}>Relatório - Valores Totais</button>
+                  </div>
+                  <div className="text-end my-2">
+                    <button className="btn btn-primary col-12" onClick={handleClickRelatorioTotal}>Relatório - Histórico de Vendas</button>
+                  </div>
+                  <div className='d-flex'>
+                    <div className='form-check m-2'>
+                      <input
+                        className='form-check-input'
+                        type="checkbox"
+                        id="alimentacaoCheckbox"
+                        checked={showAlimentacao}
+                        onChange={() => setShowAlimentacao(!showAlimentacao)}
+                      />
+                      <label htmlFor="alimentacaoCheckbox">Mostrar Alimentação</label>
+                    </div>
+                    <div className='form-check m-2'>
+                      <input
+                        className='form-check-input'
+                        type="checkbox"
+                        id="bazarCheckbox"
+                        checked={showBazar}
+                        onChange={() => setShowBazar(!showBazar)}
+                      />
+                      <label htmlFor="bazarCheckbox">Mostrar Bazar</label>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
-            <div style={{ overflowY: "auto" }} className='col-md-8'>
-              {diarioAlimentacao.length > 0 && (
-                <>
-                  <h3>Alimentação</h3>
-                  {renderTable(diarioAlimentacao)}
-                  <p><strong>Total de Qtd. Vendida:</strong> {calculateTotal(diarioAlimentacao)}</p>
-                </>
-              )}
-              {diarioBazar.length > 0 && (
-                <>
-                  <h3 className="mt-4">Bazar</h3>
-                  {renderTable(diarioBazar)}
-                  <p><strong>Total de Qtd. Vendida:</strong> {calculateTotal(diarioBazar)}</p>
-                </>
-              )}
+            <div style={{ height: "400px", overflowY: "auto" }} className='col-md-8'>
+              {renderVendas()}
             </div>
             <div>
-
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
 }
 
-export default Relatorio;
+export default Inicial;

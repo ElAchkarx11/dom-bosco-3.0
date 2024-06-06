@@ -6,8 +6,10 @@ import { useState, useEffect } from 'react';
 import { signOut, getAuth, onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase.js';
 import { collection, addDoc, query, getDocs, writeBatch, where } from 'firebase/firestore';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
-//Navbar
+// Navbar
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
@@ -69,7 +71,8 @@ function Alimentacao() {
         nome: produtoSelecionado.nome,
         secao: produtoSelecionado.secao,
         estoque: produtoSelecionado.estoque,
-        qtd: parseInt(inputQtd, 10)
+        qtd: parseInt(inputQtd, 10),
+        preco: Number(produtoSelecionado.preco) // Converte o preço do produto para número
       }];
       setAlimento(newAlimentoList);
       localStorage.setItem("alimentacao", JSON.stringify(newAlimentoList));
@@ -79,6 +82,7 @@ function Alimentacao() {
       alert("Item não cadastrado!");
     }
   }
+
   const renderOptions = () => {
     const alimentacaoProdutos = produtos.filter(produto => produto.secao === "Alimentacao");
 
@@ -87,16 +91,21 @@ function Alimentacao() {
     ));
   };
 
+  const calculateTotal = () => {
+    return alimento.reduce((total, item) => total + (item.preco * item.qtd), 0).toFixed(2);
+  };
+
   const renderItems = () => {
     return alimento.map((item, index) => (
       <div className='row pt-2' key={index}>
-        <div className='col-4'>
+        <div className='col-3'>
           <p className='pb-3 border-0 border-dark' style={{ wordWrap: 'break-word' }}>
             {item.nome}
           </p>
         </div>
-        <div className='col-3 text-center'><p>{item.codigo}</p></div>
+        <div className='col-2 text-center'><p>{item.preco.toFixed(2)}</p></div>
         <div className='col-2 text-center'><p>{item.qtd}</p></div>
+        <div className='col-3 text-center'><p>{(item.preco * item.qtd).toFixed(2)}</p></div> {/* Novo campo Valor total */}
         <div className='col-1 text-center'>
           <button onClick={() => limparItem(index)} className='btn btn-outline-danger btn-sm'><CartX title='Sair' fontSize={20} /></button>
         </div>
@@ -138,39 +147,100 @@ function Alimentacao() {
         return;
       }
 
-      try {
-        const batch = writeBatch(db);
+      const userConfirmed = window.confirm("Gerar Recibo?");
 
-        for (const item of alimento) {
-          const produtosRef = query(collection(db, "produtos"), where("codigo", "==", item.codigo));
-          const snapshot = await getDocs(produtosRef);
+      if (userConfirmed) {
+        try {
+          const batch = writeBatch(db);
 
-          snapshot.forEach((doc) => {
-            const produtoRef = doc.ref;
-            const newEstoque = doc.data().estoque - item.qtd;
-            batch.update(produtoRef, { estoque: newEstoque });
+          for (const item of alimento) {
+            const produtosRef = query(collection(db, "produtos"), where("codigo", "==", item.codigo));
+            const snapshot = await getDocs(produtosRef);
+
+            snapshot.forEach((doc) => {
+              const produtoRef = doc.ref;
+              const newEstoque = doc.data().estoque - item.qtd;
+              batch.update(produtoRef, { estoque: newEstoque });
+            });
+          }
+
+          await batch.commit();
+
+          await addDoc(collection(db, "alimentacao"), {
+            alimentos: alimento,
+            timestamp: new Date()
           });
+
+          gerarReciboPDF(alimento);
+          limparLista();
+          alert("Venda finalizada com sucesso!");
+        } catch (e) {
+          console.error("Erro ao adicionar o documento: ", e);
+          alert("Erro ao finalizar a venda. Tente novamente.");
         }
+      } else {
+        try {
+          const batch = writeBatch(db);
 
-        await batch.commit();
+          for (const item of alimento) {
+            const produtosRef = query(collection(db, "produtos"), where("codigo", "==", item.codigo));
+            const snapshot = await getDocs(produtosRef);
 
-        await addDoc(collection(db, "alimentacao"), {
-          alimentos: alimento,
-          timestamp: new Date()
-        });
+            snapshot.forEach((doc) => {
+              const produtoRef = doc.ref;
+              const newEstoque = doc.data().estoque - item.qtd;
+              batch.update(produtoRef, { estoque: newEstoque });
+            });
+          }
 
-        limparLista();
-        alert("Venda finalizada com sucesso!");
-      } catch (e) {
-        console.error("Erro ao adicionar o documento: ", e);
-        alert("Erro ao finalizar a venda. Tente novamente.");
+          await batch.commit();
+
+          await addDoc(collection(db, "alimentacao"), {
+            alimentos: alimento,
+            timestamp: new Date()
+          });
+
+          limparLista();
+          alert("Venda finalizada com sucesso!");
+        } catch (e) {
+          console.error("Erro ao adicionar o documento: ", e);
+          alert("Erro ao finalizar a venda. Tente novamente.");
+        }
       }
     } else {
       alert("Nenhum item no carrinho!");
     }
   };
 
-
+  const gerarReciboPDF = (alimento) => {
+    const pdf = new jsPDF();
+    pdf.setFontSize(18);
+    pdf.text("Recibo de Venda", 20, 20);
+    pdf.setFontSize(12);
+  
+    const columns = ["Produto", "Código", "Quantidade", "Preço Unitário", "Total"];
+    const rows = alimento.map(item => [
+      item.nome,
+      item.codigo,
+      item.qtd,
+      Number(item.preco).toFixed(2),
+      (item.qtd * item.preco).toFixed(2)
+    ]);
+  
+    const total = alimento.reduce((sum, item) => sum + (item.qtd * item.preco), 0).toFixed(2);
+  
+    pdf.autoTable({
+      head: [columns],
+      body: rows,
+      foot: [['', '', '', 'Total da Venda:', total]],
+      startY: 30,
+      theme: 'grid',
+      footStyles: { fillColor: [22, 160, 133], textColor: [255, 255, 255] },
+    });
+  
+    pdf.save('Recibo_Alimento.pdf');
+  };
+  
 
   const handleClickInicial = () => {
     navigate('/Inicial');
@@ -239,13 +309,14 @@ function Alimentacao() {
               <div className='row justify-content-center'>
                 <div className='col-md-6 col-12'>
                   <div className='row pb-4'>
-                    <div className='col-4'>
+                    <div className='col-3'>
                       <strong className='pb-3 border-0 border-dark'>
                         NOME
                       </strong>
                     </div>
-                    <div className='col-3 text-center'><strong>CÓDIGO</strong></div>
+                    <div className='col-2 text-center'><strong>PREÇO</strong></div>
                     <div className='col-2 text-center'><strong>QTD.</strong></div>
+                    <div className='col-3 text-center'><strong>VALOR TOTAL</strong></div> {/* Novo header */}
                   </div>
                   <div style={{ height: '350px', overflowY: 'auto' }}>
 
@@ -286,7 +357,19 @@ function Alimentacao() {
                       </button>
                     </div>
                   </form>
+                  <div className='form-group mt-3'>
+                    <label htmlFor='total'>Valor Total:</label>
+                    <input
+                      type='text'
+                      className='form-control'
+                      value={`R$ ${calculateTotal()}`}
+                      id='total'
+                      name='total'
+                      readOnly
+                    />
+                  </div>
                 </div>
+
                 <button onClick={handleFinalizar} type="button" className="btn btn-outline-success btn-lg btn-block mt-4">
                   Finalizar
                 </button>

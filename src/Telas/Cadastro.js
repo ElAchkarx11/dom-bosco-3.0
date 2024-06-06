@@ -65,12 +65,6 @@ function Cadastro() {
     setCodigo(randomCode);
   }
 
-  const mostrarUsuario = () => {
-    const user = getAuth();
-    const auth = user.currentUser;
-    console.log(auth.email);
-  }
-
   const handleLogout = () => {
     signOut(auth);
   }
@@ -129,7 +123,7 @@ function Cadastro() {
   }
 
   return (
-    <div className='container-fluid bg-pastel-blue'>
+    <div className='container-fluid'>
       <Navbar className='row' bg="dark" variant="dark" expand="lg">
         <Container fluid>
           <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>

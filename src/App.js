@@ -7,11 +7,11 @@ import Cadastro from './Telas/Cadastro';
 import Bazar from './Telas/Bazar';
 import Alimentacao from './Telas/Alimentacao';
 import Visualizacao from './Telas/Visualizacao'
-import Relatorio from './Telas/Relatorio'
 import EditarProduto from './Telas/EditarProduto';
+import VendaDetail from './Telas/VendaDetail';
 
 function App() {
-  
+
   return (
     <Router>
       <Routes>
@@ -21,8 +21,8 @@ function App() {
         <Route path="/Vendas Bazar/Bazar" element={<Bazar />} />
         <Route path="/Vendas Alimento/Alimentacao" element={<Alimentacao />} />
         <Route path="/Visualizacao" element={<Visualizacao />} />
-        <Route path="/Relatorio" element={<Relatorio />} />
         <Route path="/EditarProduto/:id" element={<EditarProduto />} />
+        <Route path="/:tipo/:id" element={<VendaDetail />} />
       </Routes>
     </Router>
   );
