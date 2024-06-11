@@ -10,6 +10,11 @@ import Nav from 'react-bootstrap/Nav';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+import Logo from '../Images/logo.png';
+
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
+
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -21,6 +26,8 @@ function Inicial() {
   const [endDate, setEndDate] = useState(localStorage.getItem('endDate') || '');
   const [showAlimentacao, setShowAlimentacao] = useState(true);
   const [showBazar, setShowBazar] = useState(true);
+
+  
 
   useEffect(() => {
     const auth = getAuth();
@@ -43,27 +50,38 @@ function Inicial() {
     localStorage.setItem('endDate', endDate);
   }, [endDate]);
 
+
   const fetchRelatorios = async () => {
     if (!startDate || !endDate) {
-      alert("Por favor, selecione o intervalo de datas.");
+      toast.error("Por favor, selecione o intervalo de datas.");
       return;
     }
 
+    // Define a data inicial no início do dia seguinte (00:00:00)
     const inicio = new Date(startDate);
+    inicio.setDate(inicio.getDate() + 1); // Adiciona um dia
+    inicio.setHours(0, 0, 0, 0);
+
+    // Define a data final no fim do dia seguinte (23:59:59)
     const fim = new Date(endDate);
-    fim.setDate(fim.getDate() + 1); // Adiciona um dia à data final
+    fim.setDate(fim.getDate() + 1); // Adiciona um dia
+    fim.setHours(23, 59, 59, 999);
 
     try {
       let relatorios = [];
 
       // Consultas para alimentação
       if (showAlimentacao) {
-        const alimentacaoQuery = query(collection(db, "alimentacao"), where("timestamp", ">=", inicio), where("timestamp", "<", fim));
+        const alimentacaoQuery = query(
+          collection(db, "alimentacao"),
+          where("timestamp", ">=", inicio),
+          where("timestamp", "<=", fim)
+        );
         const alimentacaoSnapshot = await getDocs(alimentacaoQuery);
 
         const alimentacaoData = alimentacaoSnapshot.docs.map(doc => {
           const data = doc.data();
-          const secao = (data.alimentos && data.alimentos.length > 0 && data.alimentos[0].secao) || 'N/A'; // Acessa o campo secao dentro do array
+          const secao = (data.alimentos && data.alimentos.length > 0 && data.alimentos[0].secao) || 'N/A';
           return {
             ...data,
             id: doc.id,
@@ -77,12 +95,16 @@ function Inicial() {
 
       // Consultas para bazar
       if (showBazar) {
-        const bazarQuery = query(collection(db, "bazar"), where("timestamp", ">=", inicio), where("timestamp", "<", fim));
+        const bazarQuery = query(
+          collection(db, "bazar"),
+          where("timestamp", ">=", inicio),
+          where("timestamp", "<=", fim)
+        );
         const bazarSnapshot = await getDocs(bazarQuery);
 
         const bazarData = bazarSnapshot.docs.map(doc => {
           const data = doc.data();
-          const secao = (data.bazar && data.bazar.length > 0 && data.bazar[0].secao) || 'N/A'; // Acessa o campo secao dentro do array
+          const secao = (data.bazar && data.bazar.length > 0 && data.bazar[0].secao) || 'N/A';
           return {
             ...data,
             id: doc.id,
@@ -139,7 +161,7 @@ function Inicial() {
   const handleClickRelatorioTotal = () => {
     // Verifica se há vendas a serem incluídas no relatório total
     if (vendas.length === 0) {
-      alert("Não há vendas para gerar o relatório total.");
+      toast.error("Não há vendas para gerar o relatório total.");
       return;
     }
 
@@ -218,7 +240,7 @@ function Inicial() {
   const handleClickRelatorio = () => {
     // Verifica se há vendas a serem incluídas no relatório
     if (vendas.length === 0) {
-      alert("Não há vendas para gerar o relatório.");
+      toast.error("Não há vendas para gerar o relatório.");
       return;
     }
 
@@ -328,12 +350,12 @@ function Inicial() {
     <div className='container-fluid'>
       <Navbar className='row' bg="dark" variant="dark" expand="lg">
         <Container fluid>
+          <Navbar.Brand onClick={handleClickInicial}><img style={{ width: "50px" }} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
           <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link onClick={handleClickInicial}>Inicio</Nav.Link>
-              <Nav.Link onClick={handleClickCadastro}>Cadastro</Nav.Link>
               <Nav.Link onClick={handleClickVisualizacao}>Produtos</Nav.Link>
               <NavDropdown title="Vendas" id="basic-nav-dropdown">
                 <NavDropdown.Item onClick={handleClickAlimentacao}>Alimentação</NavDropdown.Item>
@@ -348,11 +370,12 @@ function Inicial() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+      <ToastContainer />
       <div className='row justify-content-center'>
         <div className='container-fluid col-md-11 bg-white p-4'>
           <div className='row sistemas justify-content-start'>
             <div className='cabecalho text-start col-12 mb-4'>
-              <h2>Relatório de Vendas</h2>
+              <h3>Relatório de Vendas</h3>
               <hr />
             </div>
             <div style={{ height: "400px" }} className='border rounded col-md-4'>
@@ -375,7 +398,7 @@ function Inicial() {
                     <button className="btn btn-primary col-12" onClick={fetchRelatorios}>Buscar Relatórios</button>
                   </div>
                   <div className="text-end my-2">
-                    <button className="btn btn-primary col-12" onClick={handleClickRelatorio}>Relatório - Valores Totais</button>
+                    <button className="btn btn-primary col-12" onClick={handleClickRelatorio}>Relatório - Resumo de Itens</button>
                   </div>
                   <div className="text-end my-2">
                     <button className="btn btn-primary col-12" onClick={handleClickRelatorioTotal}>Relatório - Histórico de Vendas</button>

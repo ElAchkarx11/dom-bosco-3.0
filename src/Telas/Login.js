@@ -5,7 +5,10 @@ import firebase from 'firebase/compat/app';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
+import Logo from '../Images/logo.png';
 
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
 
 function Login() {
 
@@ -34,7 +37,7 @@ function Login() {
     signInWithEmailAndPassword(authInstance, email, senha) // Use a instância auth corretamente
       .then(userCredential => {
         const user = userCredential.user;
-        alert('Login bem-sucedido!');
+        toast.success("Login bem-sucedido");
         navigate('/Inicial')
       })
       .catch(error => {
@@ -48,7 +51,8 @@ function Login() {
   return (
     <div className="container-fluid bg-pastel-blue vh-100">
       <div className="row justify-content-center ">
-        <h1 className='text-center p-4'>Instituto Dom Bosco</h1>
+        <img className='pt-4' style={{width: "150px"}} src={Logo} alt='Instituto Dom Bosco'></img>
+        <h2 className='text-center pb-4'>Instituto Dom Bosco</h2>
         <div className="col-md-4">
 
           <div className="card">

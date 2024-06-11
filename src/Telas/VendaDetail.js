@@ -11,6 +11,11 @@ import Nav from 'react-bootstrap/Nav';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import { DoorOpen } from 'react-bootstrap-icons';
 
+import Logo from '../Images/logo.png';
+
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
+
 function VendaDetail() {
     const { tipo, id } = useParams();
     const [venda, setVenda] = useState(null);
@@ -108,12 +113,12 @@ function VendaDetail() {
         <div className='container-fluid'>
             <Navbar className='row' bg="dark" variant="dark" expand="lg">
                 <Container fluid>
+                    <Navbar.Brand onClick={handleClickInicial}><img style={{ width: "50px" }} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
                     <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="me-auto">
                             <Nav.Link onClick={handleClickInicial}>Inicio</Nav.Link>
-                            <Nav.Link onClick={handleClickCadastro}>Cadastro</Nav.Link>
                             <Nav.Link onClick={handleClickVisualizacao}>Produtos</Nav.Link>
                             <NavDropdown title="Vendas" id="basic-nav-dropdown">
                                 <NavDropdown.Item onClick={handleClickAlimentacao}>Alimentação</NavDropdown.Item>
@@ -128,6 +133,7 @@ function VendaDetail() {
                     </Navbar.Collapse>
                 </Container>
             </Navbar>
+            <ToastContainer />
             <div className='row justify-content-center'>
                 <div className='vendas-container'>
                     <div className='vendas container-sm bg-white rounded p-4'>

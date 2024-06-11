@@ -1,13 +1,20 @@
-import '../App.css';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CartX, DoorOpen } from 'react-bootstrap-icons';
-import { useState, useEffect } from 'react';
-import { signOut, getAuth, onAuthStateChanged } from 'firebase/auth';
-import { db, auth } from '../firebase.js';
-import { collection, addDoc, query, getDocs, writeBatch, where } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, addDoc, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import Select from 'react-select';
+
+import Logo from '../Images/logo.png';
+
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
+
+import '../App.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { db, auth } from '../firebase.js';
 
 // Navbar
 import Container from 'react-bootstrap/Container';
@@ -18,8 +25,8 @@ import NavDropdown from 'react-bootstrap/NavDropdown';
 function Bazar() {
   const navigate = useNavigate();
   const [authenticated, setAuthenticated] = useState(false);
-  const [inputValue, setInputValue] = useState('');
   const [inputQtd, setInputQtd] = useState('');
+  const [selectedProduto, setSelectedProduto] = useState(null);
   const [bazar, setBazar] = useState(() => {
     const savedBazar = localStorage.getItem("bazar");
     return savedBazar ? JSON.parse(savedBazar) : [];
@@ -63,38 +70,40 @@ function Bazar() {
   };
 
   async function loadProdutos() {
-    const produtoSelecionado = produtos.find(produto => produto.id === inputValue);
+    if (selectedProduto) {
+      const produtoSelecionado = produtos.find(produto => produto.id === selectedProduto.value);
 
-    if (produtoSelecionado) {
-      const newBazarList = [...bazar, {
-        codigo: produtoSelecionado.codigo,
-        nome: produtoSelecionado.nome,
-        secao: produtoSelecionado.secao,
-        estoque: produtoSelecionado.estoque,
-        qtd: parseInt(inputQtd, 10),
-        preco: Number(produtoSelecionado.preco) // Converte o preço do produto para número
-      }];
-      setBazar(newBazarList);
-      localStorage.setItem("bazar", JSON.stringify(newBazarList));
-      setInputValue('');
-      setInputQtd('');
-    } else {
-      alert("Item não cadastrado!");
+      if (produtoSelecionado) {
+        const newBazarList = [...bazar, {
+          codigo: produtoSelecionado.codigo,
+          nome: produtoSelecionado.nome,
+          secao: produtoSelecionado.secao,
+          estoque: produtoSelecionado.estoque,
+          qtd: parseInt(inputQtd, 10),
+          preco: Number(produtoSelecionado.preco)
+        }];
+        setBazar(newBazarList);
+        localStorage.setItem("bazar", JSON.stringify(newBazarList));
+        setSelectedProduto(null);
+        setInputQtd('');
+      } else {
+        toast.error("Item não cadastrado!");
+      }
     }
   }
 
   const renderOptions = () => {
     const bazarProdutos = produtos.filter(produto => produto.secao === "Bazar");
 
-    return bazarProdutos.map((produto) => (
-      <option key={produto.id} value={produto.id}>{produto.nome}</option>
-    ));
+    return bazarProdutos.map((produto) => ({
+      value: produto.id,
+      label: produto.nome
+    }));
   };
 
   const calculateTotal = () => {
     return bazar.reduce((total, item) => total + (item.preco * item.qtd), 0).toFixed(2);
   };
-
 
   const renderItems = () => {
     return bazar.map((item, index) => (
@@ -106,14 +115,13 @@ function Bazar() {
         </div>
         <div className='col-2 text-center'><p>{item.preco.toFixed(2)}</p></div>
         <div className='col-2 text-center'><p>{item.qtd}</p></div>
-        <div className='col-3 text-center'><p>{(item.preco * item.qtd).toFixed(2)}</p></div> {/* Novo campo Valor total */}
+        <div className='col-3 text-center'><p>{(item.preco * item.qtd).toFixed(2)}</p></div>
         <div className='col-1 text-center'>
           <button onClick={() => limparItem(index)} className='btn btn-outline-danger btn-sm'><CartX title='Sair' fontSize={20} /></button>
         </div>
       </div>
     ));
   };
-
 
   const limparItem = (indexR) => {
     const newBazarList = bazar.filter((_, index) => index !== indexR);
@@ -145,7 +153,7 @@ function Bazar() {
 
       if (insufficientStockProducts.length > 0) {
         const productsString = insufficientStockProducts.join(', ');
-        alert(`Não há estoque suficiente para os produtos: ${productsString}. Por favor, ajuste as quantidades.`);
+        toast.error(`Não há estoque suficiente para os produtos: ${productsString}. Por favor, ajuste as quantidades.`);
         return;
       }
 
@@ -175,10 +183,10 @@ function Bazar() {
 
           gerarReciboPDF(bazar);
           limparLista();
-          alert("Venda finalizada com sucesso!");
+          toast.success("Venda finalizada com sucesso!");
         } catch (e) {
           console.error("Erro ao adicionar o documento: ", e);
-          alert("Erro ao finalizar a venda. Tente novamente.");
+          toast.error("Erro ao finalizar a venda. Tente novamente.");
         }
       } else {
         try {
@@ -203,14 +211,14 @@ function Bazar() {
           });
 
           limparLista();
-          alert("Venda finalizada com sucesso!");
+          toast.success("Venda finalizada com sucesso!");
         } catch (e) {
           console.error("Erro ao adicionar o documento: ", e);
-          alert("Erro ao finalizar a venda. Tente novamente.");
+          toast.error("Erro ao finalizar a venda. Tente novamente.");
         }
       }
     } else {
-      alert("Nenhum item no carrinho!");
+      toast.error("Nenhum item no carrinho!");
     }
   };
 
@@ -242,7 +250,6 @@ function Bazar() {
 
     pdf.save('Recibo_Bazar.pdf');
   };
-
 
   const handleClickInicial = () => {
     navigate('/Inicial');
@@ -276,17 +283,16 @@ function Bazar() {
     navigate('/Relatorio');
   }
 
-
   return (
     <div className='container-fluid bg-pastel-blue'>
       <Navbar className='row' bg="dark" variant="dark" expand="lg">
         <Container fluid>
+          <Navbar.Brand onClick={handleClickInicial}><img style={{width: "50px"}} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
           <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link onClick={handleClickInicial}>Inicio</Nav.Link>
-              <Nav.Link onClick={handleClickCadastro}>Cadastro</Nav.Link>
               <Nav.Link onClick={handleClickVisualizacao}>Produtos</Nav.Link>
               <NavDropdown title="Vendas" id="basic-nav-dropdown">
                 <NavDropdown.Item onClick={handleClickAlimentacao}>Alimentação</NavDropdown.Item>
@@ -301,6 +307,7 @@ function Bazar() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+      <ToastContainer />
       <div className='row justify-content-center'>
         <div className='opcoes-container'>
           <div className='opcoes container-sm bg-white rounded p-4'>
@@ -322,25 +329,23 @@ function Bazar() {
                     <div className='col-3 text-center'><strong>VALOR TOTAL</strong></div> {/* Novo header */}
                   </div>
 
-                  <div style={{ height: '350px', overflowY: 'auto' }}>
+                  <div style={{ height: '280px', overflowY: 'auto' }}>
                     <div className='item'>{renderItems()}</div>
                   </div>
                 </div>
                 <div className='col-md-6'>
                   <form onSubmit={handleAddItem}>
                     <div className='form-group'>
-                      <label htmlFor='id'>Selecione o Produto:</label>
-                      <select
-                        className='form-control'
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        id='id'
-                        name='id'
-                        required
-                      >
-                        <option value=''>Selecione um produto</option>
-                        {renderOptions()}
-                      </select>
+                      <label htmlFor='searchTerm'>Selecione o Produto:</label>
+                      <Select
+                        options={renderOptions()}
+                        value={selectedProduto}
+                        onChange={setSelectedProduto}
+                        placeholder='Digite o nome do produto'
+                        id='searchTerm'
+                        name='searchTerm'
+                        className='mb-3'
+                      />
                       <label htmlFor='qtd'>Quantidade</label>
                       <input
                         type='number'
@@ -386,4 +391,3 @@ function Bazar() {
 }
 
 export default Bazar;
-

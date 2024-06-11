@@ -6,7 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import { query, collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase.js';
 import { useEffect, useState } from 'react';
-import { CgEnter } from 'react-icons/cg';
+
+import { Plus } from 'react-bootstrap-icons';
+
+import Logo from '../Images/logo.png';
+
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
 
 // Navbar
 import Container from 'react-bootstrap/Container';
@@ -93,10 +99,10 @@ function Visualizacao() {
         try {
             await deleteDoc(doc(db, "produtos", id));
             setProdutos(produtos.filter((produto) => produto.id !== id));
-            alert("Produto deletado com sucesso!");
+            toast.success("Produto deletado com sucesso!");
         } catch (error) {
             console.error("Erro ao deletar o produto: ", error);
-            alert("Erro ao deletar o produto. Tente novamente.");
+            toast.error("Erro ao deletar o produto. Tente novamente.");
         }
     };
 
@@ -138,14 +144,14 @@ function Visualizacao() {
     // Renderização da lista
     return (
         <div className='container-fluid bg-pastel-blue'>
-            <Navbar className='row mb-3' bg="dark" variant="dark" expand="lg">
+            <Navbar className='row' bg="dark" variant="dark" expand="lg">
                 <Container fluid>
+                    <Navbar.Brand onClick={handleClickInicial}><img style={{ width: "50px" }} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
                     <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="me-auto">
                             <Nav.Link onClick={handleClickInicial}>Inicio</Nav.Link>
-                            <Nav.Link onClick={handleClickCadastro}>Cadastro</Nav.Link>
                             <Nav.Link onClick={handleClickVisualizacao}>Produtos</Nav.Link>
                             <NavDropdown title="Vendas" id="basic-nav-dropdown">
                                 <NavDropdown.Item onClick={handleClickAlimentacao}>Alimentação</NavDropdown.Item>
@@ -160,6 +166,7 @@ function Visualizacao() {
                     </Navbar.Collapse>
                 </Container>
             </Navbar>
+            <ToastContainer />
             <div className='row justify-content-center'>
                 <div className='opcoes-container'>
                     <div className='opcoes container-sm bg-white rounded p-4'>
@@ -167,6 +174,9 @@ function Visualizacao() {
                             <div className='header col-md-12 text-start'>
                                 <h3>Visualização de produto</h3>
                                 <hr />
+                            </div>
+                            <div className='col-md-12 text-end'>
+                                <Nav.Link onClick={handleClickCadastro}><button className='btn btn-outline-primary'>Novo Registro</button></Nav.Link>
                             </div>
                             <div className='header col-md-6 text-start'>
                                 <label htmlFor="orderOption">Ordenar por:</label>
@@ -185,8 +195,8 @@ function Visualizacao() {
                                     ))}
                                 </select>
                             </div>
-                            <div  className='header col-12 text-start mt-4'>
-                                <div className='' style={{ height: '400px', overflowY: 'auto'}}>
+                            <div className='header col-12 text-start mt-4'>
+                                <div className='' style={{ height: '300px', overflowY: 'auto' }}>
                                     <article className="list-header container mb-3">
                                         <div className='row'>
                                             <div className='col-2 d-none d-md-block'>

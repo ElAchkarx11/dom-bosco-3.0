@@ -7,6 +7,11 @@ import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { DoorOpen } from 'react-bootstrap-icons';
 
+import Logo from '../Images/logo.png';
+
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
+
 //Navbar
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
@@ -48,7 +53,7 @@ function EditarProduto() {
             if (produtoDoc.exists()) {
                 setProduto(produtoDoc.data());
             } else {
-                alert('Produto não encontrado');
+                toast.error('Produto não encontrado');
                 navigate('/Visualizacao');
             }
         };
@@ -69,11 +74,11 @@ function EditarProduto() {
         e.preventDefault();
         try {
             await updateDoc(doc(db, 'produtos', id), produto);
-            alert('Produto atualizado com sucesso!');
+            toast.success('Produto atualizado com sucesso!');
             navigate('/Visualizacao');
         } catch (error) {
             console.error('Erro ao atualizar o produto: ', error);
-            alert('Erro ao atualizar o produto. Tente novamente.');
+            toast.error('Erro ao atualizar o produto. Tente novamente.');
         }
     };
 
@@ -115,12 +120,12 @@ function EditarProduto() {
         <div className='container-fluid bg-pastel-blue'>
             <Navbar className='row' bg="dark" variant="dark" expand="lg">
                 <Container fluid>
+                    <Navbar.Brand onClick={handleClickInicial}><img style={{ width: "50px" }} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
                     <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="me-auto">
                             <Nav.Link onClick={handleClickInicial}>Inicio</Nav.Link>
-                            <Nav.Link onClick={handleClickCadastro}>Cadastro</Nav.Link>
                             <Nav.Link onClick={handleClickVisualizacao}>Produtos</Nav.Link>
                             <NavDropdown title="Vendas" id="basic-nav-dropdown">
                                 <NavDropdown.Item onClick={handleClickAlimentacao}>Alimentação</NavDropdown.Item>
@@ -135,6 +140,7 @@ function EditarProduto() {
                     </Navbar.Collapse>
                 </Container>
             </Navbar>
+            <ToastContainer />
             <div className='row justify-content-center'>
                 <div className='opcoes-container'>
                     <div className='opcoes container-sm bg-white rounded p-4'>

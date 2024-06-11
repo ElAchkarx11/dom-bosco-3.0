@@ -3,8 +3,13 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { signOut, getAuth, onAuthStateChanged } from 'firebase/auth';
+
+import Logo from '../Images/logo.png'
+
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
 
 import { ArrowLeft, DoorOpen } from 'react-bootstrap-icons';
 
@@ -34,13 +39,12 @@ function Cadastro() {
     return unsubscribe;
   }, [navigate]);
 
-  //Definindo os valores qe vão ser alterados
+  //Definindo os valores que vão ser alterados
   const [codigo, setCodigo] = useState('');
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
   const [secao, setSecao] = useState('');
   const [qtdestoque, setEstoque] = useState('');
-
 
   //Atualizador do estado com os valores
   const handleChangeCodigo = (event) => {
@@ -101,6 +105,20 @@ function Cadastro() {
     try {
       event.preventDefault();
 
+      // Verificar se o produto já existe
+      const q = query(
+        collection(db, "produtos"),
+        where("codigo", "==", codigo),
+        where("secao", "==", secao)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        toast.error("Já existe um produto com este código na mesma seção.");
+        return;
+      }
+
+      // Se não existir, realizar o cadastro
       const docRef = await addDoc(collection(db, "produtos"), {
         codigo: codigo,
         nome: nome,
@@ -109,7 +127,7 @@ function Cadastro() {
         estoque: qtdestoque,
         timestamp: serverTimestamp()
       });
-      alert("Cadastro bem-sucedido!");
+      toast.success("Cadastro Bem-sucedido!")
       setCodigo('');
       setNome('');
       setPreco('');
@@ -117,21 +135,20 @@ function Cadastro() {
       setEstoque('');
     } catch (e) {
       console.error("Erro em adicionar documento: ", e);
-      alert("Cadastro mal-sucedido");
+      toast.error("Cadastro mal-sucedido!")
     }
-
   }
 
   return (
     <div className='container-fluid'>
       <Navbar className='row' bg="dark" variant="dark" expand="lg">
         <Container fluid>
+          <Navbar.Brand onClick={handleClickInicial}><img style={{width: "50px"}} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
           <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link onClick={handleClickInicial}>Inicio</Nav.Link>
-              <Nav.Link onClick={handleClickCadastro}>Cadastro</Nav.Link>
               <Nav.Link onClick={handleClickVisualizacao}>Produtos</Nav.Link>
               <NavDropdown title="Vendas" id="basic-nav-dropdown">
                 <NavDropdown.Item onClick={handleClickAlimentacao}>Alimentação</NavDropdown.Item>
@@ -146,6 +163,7 @@ function Cadastro() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+      <ToastContainer />
       <div className='row justify-content-center'>
         <div className='opcoes-container'>
           <div className='opcoes container-sm bg-white rounded p-4'>
@@ -169,7 +187,6 @@ function Cadastro() {
                     name="cod_prod"
                     placeholder="Digíte o código do produto"
                     required
-                    onFocus={generateRandomCode} // Gera o código ao focar no campo
                   />
                 </div>
                 <div className='form-group col-md-6 p-2'>
@@ -226,6 +243,9 @@ function Cadastro() {
                 <div className='col-6'>
                   <button type="submit" className="btn btn-outline-success btn-block m-2 mt-5">
                     Salvar
+                  </button>
+                  <button onClick={handleBack} type="button" className="btn btn-outline-danger btn-block m-2 mt-5">
+                    Cancelar
                   </button>
                 </div>
               </div>

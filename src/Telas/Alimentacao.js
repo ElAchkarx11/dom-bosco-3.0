@@ -8,6 +8,12 @@ import { db, auth } from '../firebase.js';
 import { collection, addDoc, query, getDocs, writeBatch, where } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import Select from 'react-select';
+
+import Logo from '../Images/logo.png';
+
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
 
 // Navbar
 import Container from 'react-bootstrap/Container';
@@ -18,8 +24,8 @@ import NavDropdown from 'react-bootstrap/NavDropdown';
 function Alimentacao() {
   const navigate = useNavigate();
   const [authenticated, setAuthenticated] = useState(false);
-  const [inputValue, setInputValue] = useState('');
   const [inputQtd, setInputQtd] = useState('');
+  const [selectedProduto, setSelectedProduto] = useState(null); // Estado para armazenar o produto selecionado
   const [alimento, setAlimento] = useState(() => {
     const savedAlimentos = localStorage.getItem("alimentos");
     return savedAlimentos ? JSON.parse(savedAlimentos) : [];
@@ -63,32 +69,35 @@ function Alimentacao() {
   };
 
   async function loadProdutos() {
-    const produtoSelecionado = produtos.find(produto => produto.id === inputValue);
+    if (selectedProduto) { // Verifica se um produto foi selecionado
+      const produtoSelecionado = produtos.find(produto => produto.id === selectedProduto.value);
 
-    if (produtoSelecionado) {
-      const newAlimentoList = [...alimento, {
-        codigo: produtoSelecionado.codigo,
-        nome: produtoSelecionado.nome,
-        secao: produtoSelecionado.secao,
-        estoque: produtoSelecionado.estoque,
-        qtd: parseInt(inputQtd, 10),
-        preco: Number(produtoSelecionado.preco) // Converte o preço do produto para número
-      }];
-      setAlimento(newAlimentoList);
-      localStorage.setItem("alimentacao", JSON.stringify(newAlimentoList));
-      setInputValue('');
-      setInputQtd('');
-    } else {
-      alert("Item não cadastrado!");
+      if (produtoSelecionado) {
+        const newAlimentoList = [...alimento, {
+          codigo: produtoSelecionado.codigo,
+          nome: produtoSelecionado.nome,
+          secao: produtoSelecionado.secao,
+          estoque: produtoSelecionado.estoque,
+          qtd: parseInt(inputQtd, 10),
+          preco: Number(produtoSelecionado.preco) // Converte o preço do produto para número
+        }];
+        setAlimento(newAlimentoList);
+        localStorage.setItem("alimentacao", JSON.stringify(newAlimentoList));
+        setSelectedProduto(null); // Limpa o produto selecionado após a inserção
+        setInputQtd('');
+      } else {
+        toast.error("Item não cadastrado!");
+      }
     }
   }
 
   const renderOptions = () => {
     const alimentacaoProdutos = produtos.filter(produto => produto.secao === "Alimentacao");
 
-    return alimentacaoProdutos.map((produto) => (
-      <option key={produto.id} value={produto.id}>{produto.nome}</option>
-    ));
+    return alimentacaoProdutos.map((produto) => ({
+      value: produto.id,
+      label: produto.nome
+    }));
   };
 
   const calculateTotal = () => {
@@ -143,7 +152,7 @@ function Alimentacao() {
 
       if (insufficientStockProducts.length > 0) {
         const productsString = insufficientStockProducts.join(', ');
-        alert(`Não há estoque suficiente para os produtos: ${productsString}. Por favor, ajuste as quantidades.`);
+        toast.error(`Não há estoque suficiente para os produtos: ${productsString}. Por favor, ajuste as quantidades.`);
         return;
       }
 
@@ -173,10 +182,10 @@ function Alimentacao() {
 
           gerarReciboPDF(alimento);
           limparLista();
-          alert("Venda finalizada com sucesso!");
+          toast.success("Venda finalizada com sucesso!");
         } catch (e) {
           console.error("Erro ao adicionar o documento: ", e);
-          alert("Erro ao finalizar a venda. Tente novamente.");
+          toast.error("Erro ao finalizar a venda. Tente novamente.");
         }
       } else {
         try {
@@ -201,14 +210,14 @@ function Alimentacao() {
           });
 
           limparLista();
-          alert("Venda finalizada com sucesso!");
+          toast.success("Venda finalizada com sucesso!");
         } catch (e) {
           console.error("Erro ao adicionar o documento: ", e);
-          alert("Erro ao finalizar a venda. Tente novamente.");
+          toast.error("Erro ao finalizar a venda. Tente novamente.");
         }
       }
     } else {
-      alert("Nenhum item no carrinho!");
+      toast.error("Nenhum item no carrinho!");
     }
   };
 
@@ -217,7 +226,7 @@ function Alimentacao() {
     pdf.setFontSize(18);
     pdf.text("Recibo de Venda", 20, 20);
     pdf.setFontSize(12);
-  
+
     const columns = ["Produto", "Código", "Quantidade", "Preço Unitário", "Total"];
     const rows = alimento.map(item => [
       item.nome,
@@ -226,9 +235,9 @@ function Alimentacao() {
       Number(item.preco).toFixed(2),
       (item.qtd * item.preco).toFixed(2)
     ]);
-  
+
     const total = alimento.reduce((sum, item) => sum + (item.qtd * item.preco), 0).toFixed(2);
-  
+
     pdf.autoTable({
       head: [columns],
       body: rows,
@@ -237,10 +246,9 @@ function Alimentacao() {
       theme: 'grid',
       footStyles: { fillColor: [22, 160, 133], textColor: [255, 255, 255] },
     });
-  
+
     pdf.save('Recibo_Alimento.pdf');
   };
-  
 
   const handleClickInicial = () => {
     navigate('/Inicial');
@@ -278,12 +286,12 @@ function Alimentacao() {
     <div className='container-fluid bg-pastel-blue'>
       <Navbar className='row' bg="dark" variant="dark" expand="lg">
         <Container fluid>
+          <Navbar.Brand onClick={handleClickInicial}><img style={{width: "50px"}} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
           <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link onClick={handleClickInicial}>Inicio</Nav.Link>
-              <Nav.Link onClick={handleClickCadastro}>Cadastro</Nav.Link>
               <Nav.Link onClick={handleClickVisualizacao}>Produtos</Nav.Link>
               <NavDropdown title="Vendas" id="basic-nav-dropdown">
                 <NavDropdown.Item onClick={handleClickAlimentacao}>Alimentação</NavDropdown.Item>
@@ -298,6 +306,7 @@ function Alimentacao() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+      <ToastContainer />
       <div className='row justify-content-center'>
         <div className='opcoes-container'>
           <div className='opcoes container-sm bg-white rounded p-4'>
@@ -318,7 +327,7 @@ function Alimentacao() {
                     <div className='col-2 text-center'><strong>QTD.</strong></div>
                     <div className='col-3 text-center'><strong>VALOR TOTAL</strong></div> {/* Novo header */}
                   </div>
-                  <div style={{ height: '350px', overflowY: 'auto' }}>
+                  <div style={{ height: '280px', overflowY: 'auto' }}>
 
                     <div className='item'>{renderItems()}</div>
                   </div>
@@ -327,17 +336,15 @@ function Alimentacao() {
                   <form onSubmit={handleAddItem}>
                     <div className='form-group'>
                       <label htmlFor='id'>Selecione o Produto:</label>
-                      <select
-                        className='form-control'
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
+                      <Select
+                        value={selectedProduto}
+                        onChange={setSelectedProduto}
+                        options={renderOptions()}
                         id='id'
                         name='id'
-                        required
-                      >
-                        <option value=''>Selecione um produto</option>
-                        {renderOptions()}
-                      </select>
+                        placeholder='Selecione um produto'
+                        isClearable
+                      />
                       <label htmlFor='qtd'>Quantidade</label>
                       <input
                         type='number'
@@ -383,4 +390,3 @@ function Alimentacao() {
 }
 
 export default Alimentacao;
-
