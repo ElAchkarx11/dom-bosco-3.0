@@ -108,15 +108,15 @@ function Bazar() {
   const renderItems = () => {
     return bazar.map((item, index) => (
       <div className='row pt-2' key={index}>
-        <div className='col-3'>
+        <div className='col-md-3 col-3'>
           <p className='pb-3 border-0 border-dark' style={{ wordWrap: 'break-word' }}>
             {item.nome}
           </p>
         </div>
-        <div className='col-2 text-center'><p>{item.preco.toFixed(2)}</p></div>
-        <div className='col-2 text-center'><p>{item.qtd}</p></div>
-        <div className='col-3 text-center'><p>{(item.preco * item.qtd).toFixed(2)}</p></div>
-        <div className='col-1 text-center'>
+        <div className='col-2 d-none d-md-block text-center'><p>{item.preco.toFixed(2)}</p></div>
+        <div className='col-md-2 col-2 text-center'><p>{item.qtd}</p></div>
+        <div className='col-3 text-center'><p>{(item.preco * item.qtd).toFixed(2)}</p></div> {/* Novo campo Valor total */}
+        <div className='col-2 text-center'>
           <button onClick={() => limparItem(index)} className='btn btn-outline-danger btn-sm'><CartX title='Sair' fontSize={20} /></button>
         </div>
       </div>
@@ -287,7 +287,7 @@ function Bazar() {
     <div className='container-fluid bg-pastel-blue'>
       <Navbar className='row' bg="dark" variant="dark" expand="lg">
         <Container fluid>
-          <Navbar.Brand onClick={handleClickInicial}><img style={{width: "50px"}} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
+          <Navbar.Brand onClick={handleClickInicial}><img style={{ width: "50px" }} src={Logo} alt='Dom Bosco' title='Instituto Dom Bosco'></img></Navbar.Brand>
           <Navbar.Brand onClick={handleClickInicial}>Dom Bosco</Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
@@ -317,19 +317,19 @@ function Bazar() {
                 <hr />
               </div>
               <div className='row justify-content-center'>
-                <div className='col-md-6 '>
+                <div className='col-md-6 col-12'>
                   <div className='row pb-4'>
                     <div className='col-3'>
                       <strong className='pb-3 border-0 border-dark'>
                         NOME
                       </strong>
                     </div>
-                    <div className='col-2 text-center'><strong>PREÇO</strong></div>
+                    <div className='col-2 d-none d-md-block text-center'><strong>PREÇO</strong></div>
                     <div className='col-2 text-center'><strong>QTD.</strong></div>
                     <div className='col-3 text-center'><strong>VALOR TOTAL</strong></div> {/* Novo header */}
                   </div>
-
                   <div style={{ height: '280px', overflowY: 'auto' }}>
+
                     <div className='item'>{renderItems()}</div>
                   </div>
                 </div>

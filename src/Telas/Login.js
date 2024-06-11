@@ -42,6 +42,7 @@ function Login() {
       })
       .catch(error => {
         console.error('Erro ao fazer login:', error);
+        toast.error("Erro ao fazer login!");
       });  // Verifica se o usuário e a senha correspondem aos valores esperados
 
 
@@ -51,8 +52,8 @@ function Login() {
   return (
     <div className="container-fluid bg-pastel-blue vh-100">
       <div className="row justify-content-center ">
-        <img className='pt-4' style={{width: "150px"}} src={Logo} alt='Instituto Dom Bosco'></img>
-        <h2 className='text-center pb-4'>Instituto Dom Bosco</h2>
+        <img className='pt-4' title='Instituto Dom Bosco' style={{width: "150px"}} src={Logo} alt='Instituto Dom Bosco'></img>
+        <h2 className='text-center pb-4'></h2>
         <div className="col-md-4">
 
           <div className="card">

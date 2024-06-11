@@ -27,7 +27,7 @@ function Inicial() {
   const [showAlimentacao, setShowAlimentacao] = useState(true);
   const [showBazar, setShowBazar] = useState(true);
 
-  
+
 
   useEffect(() => {
     const auth = getAuth();
@@ -372,67 +372,69 @@ function Inicial() {
       </Navbar>
       <ToastContainer />
       <div className='row justify-content-center'>
-        <div className='container-fluid col-md-11 bg-white p-4'>
-          <div className='row sistemas justify-content-start'>
-            <div className='cabecalho text-start col-12 mb-4'>
-              <h3>Relatório de Vendas</h3>
-              <hr />
-            </div>
-            <div style={{ height: "400px" }} className='border rounded col-md-4'>
-              <div className=''>
-                <div className='row'>
-                  <div className='text-center border-bottom'>
-                    <h3 className='p-2'>Histórico</h3>
-                  </div>
-                  <div className='col-md-12'>
-                    <label htmlFor="startDate">Data de Início:</label>
-                    <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="form-control" />
-                  </div>
-                  <div className='col-md-12'>
-                    <label htmlFor="endDate">Data de Término:</label>
-                    <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="form-control" />
-                  </div>
-                </div>
-                <div className='align-itens-center'>
-                  <div className="text-end my-2">
-                    <button className="btn btn-primary col-12" onClick={fetchRelatorios}>Buscar Relatórios</button>
-                  </div>
-                  <div className="text-end my-2">
-                    <button className="btn btn-primary col-12" onClick={handleClickRelatorio}>Relatório - Resumo de Itens</button>
-                  </div>
-                  <div className="text-end my-2">
-                    <button className="btn btn-primary col-12" onClick={handleClickRelatorioTotal}>Relatório - Histórico de Vendas</button>
-                  </div>
-                  <div className='d-flex'>
-                    <div className='form-check m-2'>
-                      <input
-                        className='form-check-input'
-                        type="checkbox"
-                        id="alimentacaoCheckbox"
-                        checked={showAlimentacao}
-                        onChange={() => setShowAlimentacao(!showAlimentacao)}
-                      />
-                      <label htmlFor="alimentacaoCheckbox">Mostrar Alimentação</label>
+        <div className='inicial-container'>
+          <div className='inicial container-sm bg-white rounded p-4'>
+            <div className='row sistemas justify-content-center'>
+              <div className='cabecalho text-start col-12 mb-4'>
+                <h3>Relatório de Vendas</h3>
+                <hr />
+              </div>
+              <div style={{ height: "400px" }} className='border rounded col-md-4'>
+                <div className=''>
+                  <div className='row'>
+                    <div className='text-center border-bottom'>
+                      <h3 className='p-2'>Histórico</h3>
                     </div>
-                    <div className='form-check m-2'>
-                      <input
-                        className='form-check-input'
-                        type="checkbox"
-                        id="bazarCheckbox"
-                        checked={showBazar}
-                        onChange={() => setShowBazar(!showBazar)}
-                      />
-                      <label htmlFor="bazarCheckbox">Mostrar Bazar</label>
+                    <div className='col-md-12'>
+                      <label htmlFor="startDate">Data de Início:</label>
+                      <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="form-control" />
+                    </div>
+                    <div className='col-md-12'>
+                      <label htmlFor="endDate">Data de Término:</label>
+                      <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="form-control" />
                     </div>
                   </div>
+                  <div className='align-itens-center'>
+                    <div className="text-end my-2">
+                      <button className="btn btn-primary col-12" onClick={fetchRelatorios}>Buscar Relatórios</button>
+                    </div>
+                    <div className="text-end my-2">
+                      <button className="btn btn-primary col-12" onClick={handleClickRelatorio}>Relatório - Resumo de Itens</button>
+                    </div>
+                    <div className="text-end my-2">
+                      <button className="btn btn-primary col-12" onClick={handleClickRelatorioTotal}>Relatório - Histórico de Vendas</button>
+                    </div>
+                    <div className='d-flex'>
+                      <div className='form-check m-2'>
+                        <input
+                          className='form-check-input'
+                          type="checkbox"
+                          id="alimentacaoCheckbox"
+                          checked={showAlimentacao}
+                          onChange={() => setShowAlimentacao(!showAlimentacao)}
+                        />
+                        <label htmlFor="alimentacaoCheckbox">Mostrar Alimentação</label>
+                      </div>
+                      <div className='form-check m-2'>
+                        <input
+                          className='form-check-input'
+                          type="checkbox"
+                          id="bazarCheckbox"
+                          checked={showBazar}
+                          onChange={() => setShowBazar(!showBazar)}
+                        />
+                        <label htmlFor="bazarCheckbox">Mostrar Bazar</label>
+                      </div>
+                    </div>
 
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style={{ height: "400px", overflowY: "auto" }} className='col-md-8'>
-              {renderVendas()}
-            </div>
-            <div>
+              <div style={{ height: "400px", overflowY: "auto" }} className='col-md-8'>
+                {renderVendas()}
+              </div>
+              <div>
+              </div>
             </div>
           </div>
         </div>

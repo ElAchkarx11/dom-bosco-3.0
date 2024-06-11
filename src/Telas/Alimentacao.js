@@ -107,15 +107,15 @@ function Alimentacao() {
   const renderItems = () => {
     return alimento.map((item, index) => (
       <div className='row pt-2' key={index}>
-        <div className='col-3'>
+        <div className='col-md-3 col-3'>
           <p className='pb-3 border-0 border-dark' style={{ wordWrap: 'break-word' }}>
             {item.nome}
           </p>
         </div>
-        <div className='col-2 text-center'><p>{item.preco.toFixed(2)}</p></div>
-        <div className='col-2 text-center'><p>{item.qtd}</p></div>
+        <div className='col-2 d-none d-md-block text-center'><p>{item.preco.toFixed(2)}</p></div>
+        <div className='col-md-2 col-2 text-center'><p>{item.qtd}</p></div>
         <div className='col-3 text-center'><p>{(item.preco * item.qtd).toFixed(2)}</p></div> {/* Novo campo Valor total */}
-        <div className='col-1 text-center'>
+        <div className='col-2 text-center'>
           <button onClick={() => limparItem(index)} className='btn btn-outline-danger btn-sm'><CartX title='Sair' fontSize={20} /></button>
         </div>
       </div>
@@ -323,7 +323,7 @@ function Alimentacao() {
                         NOME
                       </strong>
                     </div>
-                    <div className='col-2 text-center'><strong>PREÇO</strong></div>
+                    <div className='col-2 d-none d-md-block text-center'><strong>PREÇO</strong></div>
                     <div className='col-2 text-center'><strong>QTD.</strong></div>
                     <div className='col-3 text-center'><strong>VALOR TOTAL</strong></div> {/* Novo header */}
                   </div>
